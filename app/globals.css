@@ -1,0 +1,291 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f5f5f7;
+  --surface: #ffffff;
+  --surface-2: #fbfbfd;
+  --border: #d2d2d7;
+  --border-strong: #b8b8bd;
+
+  --text: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #86868b;
+
+  --accent: #0071e3;
+  --accent-hover: #0077ed;
+  --accent-ink: #ffffff;
+
+  --success: #1e8e3e;
+  --danger: #d93025;
+
+  --code-bg: #1d1d1f;
+  --code-text: #f5f5f7;
+  --code-dim: #86868b;
+
+  --shadow-color: 220 13% 40%;
+  /* Tracks the accent so the ring picks up the dark-mode blue too, instead of pinning the
+     light-mode value onto a black ground. */
+  --focus-ring: var(--accent);
+
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000;
+    --surface: #1c1c1e;
+    --surface-2: #131316;
+    --border: #38383a;
+    --border-strong: #48484a;
+
+    --text: #f5f5f7;
+    --text-secondary: #a1a1a6;
+    --text-tertiary: #6e6e73;
+
+    --accent: #0a84ff;
+    --accent-hover: #3396ff;
+    --accent-ink: #ffffff;
+
+    --success: #32d74b;
+    --danger: #ff453a;
+
+    --code-bg: #0a0a0b;
+    --code-text: #f5f5f7;
+    --code-dim: #6e6e73;
+
+    --shadow-color: 0 0% 0%;
+  }
+}
+
+/* Explicit override wins in both directions, regardless of system preference. */
+:root[data-theme="dark"] {
+  --bg: #000000;
+  --surface: #1c1c1e;
+  --surface-2: #131316;
+  --border: #38383a;
+  --border-strong: #48484a;
+
+  --text: #f5f5f7;
+  --text-secondary: #a1a1a6;
+  --text-tertiary: #6e6e73;
+
+  --accent: #0a84ff;
+  --accent-hover: #3396ff;
+  --accent-ink: #ffffff;
+
+  --success: #32d74b;
+  --danger: #ff453a;
+
+  --code-bg: #0a0a0b;
+  --code-text: #f5f5f7;
+  --code-dim: #6e6e73;
+
+  --shadow-color: 0 0% 0%;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-code-bg: var(--code-bg);
+  --color-code-text: var(--code-text);
+  --color-code-dim: var(--code-dim);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 2px solid var(--bg);
+}
+
+/* No border-radius here: the outline already follows the element's own corners, and setting one
+   would square off every rounded-full control the moment it took keyboard focus. */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Opt-out for a control whose container already shows the focus state. Only for that case: the
+   ring is how keyboard users find themselves, and removing it anywhere it isn't replaced by an
+   equally visible one is a straight regression. */
+.focus-ring-none:focus-visible {
+  outline: none;
+}
+
+input,
+textarea {
+  caret-color: var(--accent);
+}
+
+/* Reduced motion drops movement and keeps meaning. The changed-span highlight, the validity
+   color shift, and the copy confirmation are all information, not decoration -- erasing them
+   would erase feedback, so they survive with their spatial component removed. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-card-in,
+  .animate-swap-in {
+    animation: opacity-in 0.12s ease-out;
+  }
+  .animate-dot-pop {
+    animation: none;
+  }
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.soft-shadow {
+  box-shadow:
+    0 1px 2px hsl(var(--shadow-color) / 0.06),
+    0 8px 24px -8px hsl(var(--shadow-color) / 0.12);
+}
+
+.soft-shadow-lg {
+  box-shadow:
+    0 2px 6px hsl(var(--shadow-color) / 0.08),
+    0 16px 40px -12px hsl(var(--shadow-color) / 0.18);
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-in {
+  animation: fade-in 0.14s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes opacity-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* The focal moment. Every control on the page edits one string, and the string is often far from
+   the control that changed it -- so the readout names the characters that just arrived, then
+   lets go of them. Color only: this is code, and moving code would read as noise. Held long
+   enough to be read (620ms), eased so the release is the slow part. */
+@keyframes highlight-settle {
+  from {
+    background-color: color-mix(in srgb, var(--accent) 60%, transparent);
+    color: #ffffff;
+  }
+  to {
+    background-color: transparent;
+    color: var(--code-text);
+  }
+}
+.animate-highlight {
+  animation: highlight-settle 620ms cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 4px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* The same moment on a light surface, where a solid accent block would shout. */
+@keyframes highlight-settle-plain {
+  from {
+    background-color: color-mix(in srgb, var(--accent) 20%, transparent);
+    color: var(--accent);
+  }
+  to {
+    background-color: transparent;
+    color: var(--text);
+  }
+}
+.animate-highlight-plain {
+  animation: highlight-settle-plain 620ms cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 4px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* A condition is appended below the ones already there, so it rises into the slot it landed in. */
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-card-in {
+  animation: card-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* The one instant the expression becomes copyable. */
+@keyframes dot-pop {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.45);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.animate-dot-pop {
+  animation: dot-pop 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-swap-in {
+  animation: opacity-in 0.15s ease-out;
+}
