@@ -14,7 +14,7 @@ npm run lint
 npm run build        # static export -> ./out
 ```
 
-Run `typecheck`, `lint`, and `test` before calling anything done - CI (`.github/workflows/deploy.yml`) runs all three on every push and PR, and only deploys if they pass.
+Run `typecheck`, `lint`, and `test` before calling anything done - CI (`.github/workflows/cicd.yml`) runs all three on every push and PR (skipped for release-please's own PR), and only deploys on push to `main` if they pass.
 
 ## Architecture
 

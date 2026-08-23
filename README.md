@@ -34,7 +34,7 @@ npm run build       # static export to ./out
 
 ## Deployment
 
-`.github/workflows/deploy.yml` builds and deploys to GitHub Pages on every push to `main`/`master`, after lint, typecheck, and tests pass. Enable once in **Settings → Pages → Source → GitHub Actions**.
+`.github/workflows/cicd.yml` runs lint, typecheck, and tests on every push and pull request; pushes to `main` additionally build and deploy to GitHub Pages once those checks pass.
 
 ## Releases
 
