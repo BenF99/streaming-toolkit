@@ -19,7 +19,7 @@ lib/
   exit-condition/   Exit Condition Builder domain logic
 ```
 
-Each tool owns a `lib/<tool>` and `components/<tool>` pair; everything shared lives in `components/ui` and `components/layout`. See [CLAUDE.md](CLAUDE.md) for the internals of a given tool.
+Each tool owns a `lib/<tool>` and `components/<tool>` pair; everything shared lives in `components/ui` and `components/layout`.
 
 ## Development
 

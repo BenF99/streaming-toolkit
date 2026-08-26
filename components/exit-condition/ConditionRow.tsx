@@ -24,6 +24,8 @@ export function ConditionRow({ condition, onChange, onRemove, index, showLabel, 
   const [open, setOpen] = useState(true);
   const collapsed = showLabel && !open;
   const leftType = termOutputType(condition.left);
+  // A stream count only means something compared to a fixed number, never to another constant.
+  const leftIsCountedStreams = condition.left.kind === "chain" && condition.left.chain.steps.at(-1)?.fnId === "count";
   const availableOps = comparisonOpsForType(leftType);
   const canCompare = availableOps.length > 0;
   const hasComparison = condition.op !== null;
@@ -139,7 +141,14 @@ export function ConditionRow({ condition, onChange, onRemove, index, showLabel, 
               <IconClose className="h-3 w-3" />
             </button>
           </div>
-          <TermBuilder depth={depth} restrictType={requiredTypesFor(condition.op!, leftType)} term={condition.right} onChange={(right) => onChange({ ...condition, right })} label="Compared to" />
+          <TermBuilder
+            depth={depth}
+            restrictType={requiredTypesFor(condition.op!, leftType)}
+            literalOnly={leftIsCountedStreams}
+            term={condition.right}
+            onChange={(right) => onChange({ ...condition, right })}
+            label="Compared to"
+          />
         </div>
       ) : canCompare ? (
         <div className="flex flex-col gap-1.5">

@@ -40,14 +40,20 @@ interface TermBuilderProps {
   /** Withhold fixed-value options, offering only constants - set when the sibling operand is
    * already fixed, so two fixed values (arithmetic the user could do in their head) is unreachable. */
   requireLive?: boolean;
+  /** Withhold constants entirely, offering only a typed input - set when every constant option
+   * would be a category mismatch (e.g. comparing a stream count to totalTimeTaken). */
+  literalOnly?: boolean;
 }
 
-export function TermBuilder({ term, onChange, label, restrictType, depth = 0, requireLive = false }: TermBuilderProps) {
+export function TermBuilder({ term, onChange, label, restrictType, depth = 0, requireLive = false, literalOnly = false }: TermBuilderProps) {
   const inputId = useId();
   // Includes constants that only *reach* the required type via a function - totalStreams belongs
   // in a number slot because count() gets it there.
-  const constants = restrictType ? constantsProducing(restrictType) : CONSTANTS;
+  const constants = literalOnly ? [] : restrictType ? constantsProducing(restrictType) : CONSTANTS;
   const literalTypes = requireLive ? [] : (["string", "number", "boolean"] as const).filter((t) => !restrictType || restrictType.includes(t));
+  // With no constants and exactly one literal type, the picker row would just be a single
+  // always-selected chip sitting above the input - skip it and show the input alone.
+  const skipPicker = literalOnly && constants.length === 0 && literalTypes.length === 1;
   // A number list (avg/max/etc.) has too many routes to a number to auto-seed; a stream list
   // has exactly one (count), so calculation offers to count it first.
   const carriesToNumber = term.kind !== "chain" || termOutputType(term) === "number" || termOutputType(term) === "streams";
@@ -56,6 +62,8 @@ export function TermBuilder({ term, onChange, label, restrictType, depth = 0, re
   const canOfferTernary = depth === 0;
   // Flat chips for a restricted (small) option set; a popover for the fully-open picker.
   const useChips = !!restrictType;
+  // One-option picker reads as locked; show a label instead.
+  const onlyOption = useChips && constants.length === 1 && literalTypes.length === 0 ? constants[0] : null;
   const problem = termProblem(term);
 
   // Focus only a value box that mounts empty. Plain `autoFocus` would steal the caret out of the
@@ -77,7 +85,11 @@ export function TermBuilder({ term, onChange, label, restrictType, depth = 0, re
 
       {(term.kind === "chain" || term.kind === "literal") && (
         <>
-          {useChips ? (
+          {skipPicker ? null : onlyOption ? (
+            <span className="font-mono text-[13px] text-text-secondary" title={`${PLAIN_CONSTANTS[onlyOption.id]?.label ?? onlyOption.label}: ${onlyOption.description}`}>
+              Starts from {onlyOption.label}
+            </span>
+          ) : useChips ? (
             <div className="flex flex-wrap items-center gap-1.5">
               {constants.map((c) => (
                 <Chip
@@ -190,9 +202,9 @@ export function TermBuilder({ term, onChange, label, restrictType, depth = 0, re
                   onClick={() =>
                     onChange({
                       kind: "ternary",
-                      condition: liveCondition(),
-                      then: term,
-                      else: defaultTermForTypes([termOutputType(term)]),
+                      condition: liveCondition(term.kind === "chain" ? term.chain.sourceId : undefined),
+                      then: restrictType ? defaultTermForTypes(restrictType) : emptyTerm(),
+                      else: restrictType ? defaultTermForTypes(restrictType) : emptyTerm(),
                     })
                   }
                   title="Pick between two values based on a condition"
