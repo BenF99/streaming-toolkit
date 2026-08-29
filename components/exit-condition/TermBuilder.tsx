@@ -2,12 +2,12 @@
 
 import { useCallback, useId } from "react";
 import { ARITHMETIC_OPS, CONSTANTS, type ArithmeticOp, type SelValueType } from "@/lib/exit-condition/catalog";
-import { constantsProducing, countedChain, defaultTermForTypes, emptyChain, emptyNumberTerm, emptyTerm, isStaticTerm, liveCondition, liveNumberTerm, termOutputType, type TermNode } from "@/lib/exit-condition/model";
+import { constantsProducing, countedChain, defaultTermForTypes, emptyChain, emptyGroup, emptyNumberTerm, emptyTerm, isStaticTerm, liveCondition, liveNumberTerm, termOutputType, type TermNode } from "@/lib/exit-condition/model";
 import { termProblem } from "@/lib/exit-condition/validity";
 import { PLAIN_CONSTANTS } from "@/lib/exit-condition/plain";
 import { ChainBuilder } from "./ChainBuilder";
 import { Chip, Menu, MenuGroupLabel, MenuItem, MenuTrigger, ButtonSubtle, NameWithGloss, ProblemNote } from "@/components/ui/primitives";
-import { IconCalculate, IconCheck } from "@/components/ui/icons";
+import { IconCalculate, IconCheck, IconClose, IconPlus } from "@/components/ui/icons";
 import { ConditionRow } from "./ConditionRow";
 
 const ARITHMETIC_OP_DISPLAY: Record<ArithmeticOp, string> = { "+": "+", "-": "−", "*": "×", "/": "÷" };
@@ -28,6 +28,14 @@ function calculationSeed(term: TermNode): { left: TermNode; right: TermNode } {
   return { left: liveNumberTerm(), right: emptyNumberTerm() };
 }
 
+/** Keeps "otherwise" the same kind of value as "then". A group's boolean would technically match a
+ * true/false literal, but answering a set of conditions with a bare `false` is never the intent. */
+function matchingElse(then: TermNode, current: TermNode): TermNode {
+  if (then.kind === "group") return current.kind === "group" ? current : emptyGroup();
+  if (current.kind === "group") return defaultTermForTypes([termOutputType(then)]);
+  return termOutputType(then) === termOutputType(current) ? current : defaultTermForTypes([termOutputType(then)]);
+}
+
 interface TermBuilderProps {
   term: TermNode;
   onChange: (term: TermNode) => void;
@@ -43,9 +51,12 @@ interface TermBuilderProps {
   /** Withhold constants entirely, offering only a typed input - set when every constant option
    * would be a category mismatch (e.g. comparing a stream count to totalTimeTaken). */
   literalOnly?: boolean;
+  /** Offer a group of conditions as a value. Only a ternary branch sets this: anywhere else a
+   * group is either the wrong type or just the top-level condition list with extra brackets. */
+  allowGroup?: boolean;
 }
 
-export function TermBuilder({ term, onChange, label, restrictType, depth = 0, requireLive = false, literalOnly = false }: TermBuilderProps) {
+export function TermBuilder({ term, onChange, label, restrictType, depth = 0, requireLive = false, literalOnly = false, allowGroup = false }: TermBuilderProps) {
   const inputId = useId();
   // Includes constants that only *reach* the required type via a function - totalStreams belongs
   // in a number slot because count() gets it there.
@@ -60,6 +71,7 @@ export function TermBuilder({ term, onChange, label, restrictType, depth = 0, re
   const willCountFirst = term.kind === "chain" && termOutputType(term) === "streams";
   const canOfferCalculation = depth === 0 && (!restrictType || restrictType.includes("number")) && carriesToNumber;
   const canOfferTernary = depth === 0;
+  const canOfferGroup = allowGroup && (!restrictType || restrictType.includes("boolean"));
   // Flat chips for a restricted (small) option set; a popover for the fully-open picker.
   const useChips = !!restrictType;
   // One-option picker reads as locked; show a label instead.
@@ -187,7 +199,7 @@ export function TermBuilder({ term, onChange, label, restrictType, depth = 0, re
             </div>
           )}
 
-          {(canOfferCalculation || canOfferTernary) && (
+          {(canOfferCalculation || canOfferTernary || canOfferGroup) && (
             <div className="flex flex-wrap gap-1.5">
               {canOfferCalculation && (
                 <ButtonSubtle
@@ -210,6 +222,11 @@ export function TermBuilder({ term, onChange, label, restrictType, depth = 0, re
                   title="Pick between two values based on a condition"
                 >
                   If / then / else
+                </ButtonSubtle>
+              )}
+              {canOfferGroup && (
+                <ButtonSubtle onClick={() => onChange(emptyGroup())} title="Use a set of conditions here instead of a single value">
+                  Set of conditions
                 </ButtonSubtle>
               )}
             </div>
@@ -251,21 +268,61 @@ export function TermBuilder({ term, onChange, label, restrictType, depth = 0, re
           <TermBuilder
             depth={depth + 1}
             restrictType={restrictType}
+            allowGroup
             term={term.then}
             label="Then use"
-            onChange={(t) =>
-              onChange({
-                ...term,
-                then: t,
-                else: termOutputType(t) === termOutputType(term.else) ? term.else : defaultTermForTypes([termOutputType(t)]),
-              })
-            }
+            onChange={(t) => onChange({ ...term, then: t, else: matchingElse(t, term.else) })}
           />
-          <TermBuilder depth={depth + 1} restrictType={[termOutputType(term.then)]} term={term.else} onChange={(t) => onChange({ ...term, else: t })} label="Otherwise use" />
+          <TermBuilder depth={depth + 1} restrictType={[termOutputType(term.then)]} allowGroup term={term.else} onChange={(t) => onChange({ ...term, else: t })} label="Otherwise use" />
           {problem && <ProblemNote problem={problem} />}
           <ButtonSubtle className="self-start" onClick={() => onChange(term.then)}>
             Remove if / then / else
           </ButtonSubtle>
+        </div>
+      )}
+
+      {term.kind === "group" && (
+        <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface-2 p-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-medium text-text-tertiary">True when</span>
+            <Chip tone="accent" selected={term.joiner === "or"} onClick={() => onChange({ ...term, joiner: "or" })}>
+              any
+            </Chip>
+            <Chip tone="accent" selected={term.joiner === "and"} onClick={() => onChange({ ...term, joiner: "and" })}>
+              all
+            </Chip>
+            <span className="text-[11px] font-medium text-text-tertiary">of these hold</span>
+          </div>
+          {term.conditions.map((cond, i) => (
+            <div key={cond.id} className="flex flex-col gap-2 border-l-2 border-border-strong pl-4">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[11px] text-text-tertiary">{i === 0 ? "" : term.joiner}</span>
+                {term.conditions.length > 2 && (
+                  <button
+                    type="button"
+                    aria-label={`Remove condition ${i + 1} from the set`}
+                    onClick={() => onChange({ ...term, conditions: term.conditions.filter((_, j) => j !== i) })}
+                    className="text-text-tertiary hover:text-danger"
+                  >
+                    <IconClose className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+              <ConditionRow
+                condition={cond}
+                index={i}
+                showLabel={false}
+                depth={depth + 1}
+                onChange={(next) => onChange({ ...term, conditions: term.conditions.map((c, j) => (j === i ? next : c)) })}
+              />
+            </div>
+          ))}
+          <div className="flex flex-wrap gap-1.5">
+            <ButtonSubtle onClick={() => onChange({ ...term, conditions: [...term.conditions, liveCondition()] })}>
+              <IconPlus /> Add to the set
+            </ButtonSubtle>
+            <ButtonSubtle onClick={() => onChange(emptyTerm())}>Remove the set</ButtonSubtle>
+          </div>
         </div>
       )}
     </div>

@@ -132,6 +132,13 @@ export function termProblemDeep(term: TermNode): SelProblem | null {
       return termProblemDeep(term.left) ?? termProblemDeep(term.right) ?? termProblem(term);
     case "ternary":
       return conditionProblemDeep(term.condition) ?? termProblemDeep(term.then) ?? termProblemDeep(term.else) ?? termProblem(term);
+    case "group": {
+      for (const cond of term.conditions) {
+        const problem = conditionProblemDeep(cond);
+        if (problem) return problem;
+      }
+      return termProblem(term);
+    }
   }
 }
 
@@ -224,6 +231,8 @@ export function isTermComplete(term: TermNode): boolean {
       return isTermComplete(term.left) && isTermComplete(term.right);
     case "ternary":
       return isConditionComplete(term.condition) && isTermComplete(term.then) && isTermComplete(term.else);
+    case "group":
+      return term.conditions.length > 0 && term.conditions.every(isConditionComplete);
   }
 }
 

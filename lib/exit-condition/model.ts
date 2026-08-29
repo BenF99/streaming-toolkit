@@ -41,13 +41,16 @@ export function chainOutputType(chain: Chain, uptoIndex: number = chain.steps.le
   return t;
 }
 
-/** A value: a chain, a literal, a calculation, or a ternary. Arithmetic/ternary are term kinds,
- * not a separate mode, so either can appear anywhere a term can. */
+/** A value: a chain, a literal, a calculation, a ternary, or a parenthesised group of conditions.
+ * Arithmetic/ternary/group are term kinds, not a separate mode, so any can appear anywhere a
+ * term can. A group evaluates to a boolean, which is what lets a ternary choose between two
+ * sets of conditions rather than two plain values. */
 export type TermNode =
   | { kind: "chain"; chain: Chain }
   | { kind: "literal"; valueType: "number" | "string" | "boolean"; value: string }
   | { kind: "arithmetic"; op: ArithmeticOp; left: TermNode; right: TermNode }
-  | { kind: "ternary"; condition: Condition; then: TermNode; else: TermNode };
+  | { kind: "ternary"; condition: Condition; then: TermNode; else: TermNode }
+  | { kind: "group"; joiner: "and" | "or"; conditions: Condition[] };
 
 /** A single condition: an optional comparison between two terms, or a bare value used as-is. */
 export interface Condition {
@@ -123,6 +126,12 @@ export function liveCondition(defaultSource: string = CONSTANTS[0].id): Conditio
   return cond;
 }
 
+/** A group opens with two conditions: one condition needs no parentheses, and the parser folds a
+ * single-condition group back to the bare condition anyway. */
+export function emptyGroup(): TermNode {
+  return { kind: "group", joiner: "or", conditions: [liveCondition(), liveCondition()] };
+}
+
 /** The SEL type a term evaluates to. A ternary is assumed to match on both branches; its own
  * type is taken from `then`. */
 export function termOutputType(term: TermNode): SelValueType {
@@ -135,6 +144,8 @@ export function termOutputType(term: TermNode): SelValueType {
       return "number";
     case "ternary":
       return termOutputType(term.then);
+    case "group":
+      return "boolean";
   }
 }
 
@@ -150,6 +161,8 @@ export function isStaticTerm(term: TermNode): boolean {
       return isStaticTerm(term.left) && isStaticTerm(term.right);
     case "ternary":
       return isStaticCondition(term.condition) && isStaticTerm(term.then) && isStaticTerm(term.else);
+    case "group":
+      return term.conditions.every(isStaticCondition);
   }
 }
 

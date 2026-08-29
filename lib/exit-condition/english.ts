@@ -233,7 +233,16 @@ function termPhrase(term: TermNode, asMilliseconds = false): string {
     case "arithmetic":
       return `${termPhrase(term.left)} ${ARITHMETIC_PHRASE[term.op]} ${termPhrase(term.right)}`;
     case "ternary":
+      // Boolean branches are clauses, not values, so the condition has to lead or the sentence
+      // reads as one long run-on before reaching the "if".
+      if (termOutputType(term) === "boolean") {
+        return `if ${conditionPhrase(term.condition)}, ${termPhrase(term.then)}; otherwise ${termPhrase(term.else)}`;
+      }
       return `${termPhrase(term.then)} if ${conditionPhrase(term.condition)}, otherwise ${termPhrase(term.else)}`;
+    case "group": {
+      const parts = term.conditions.map(conditionPhrase);
+      return term.joiner === "and" ? joinAnd(parts) : joinOr(parts);
+    }
   }
 }
 
@@ -271,6 +280,9 @@ export function conditionPhrase(cond: Condition): string {
   } else if (needsComparison(cond)) {
     // Still owes a comparison - leave it visibly unfinished rather than inventing a verb.
     body = `${left} is …`;
+  } else if (termOutputType(cond.left) === "boolean") {
+    // Already a true/false clause; "is set" would be talking about it rather than saying it.
+    body = left;
   } else if (cond.left.kind === "chain" && chainOutputType(cond.left.chain) === "streams") {
     body = `there are any ${bareStreamPhrase(cond.left)}`;
   } else if (termOutputType(cond.left) === "streams") {

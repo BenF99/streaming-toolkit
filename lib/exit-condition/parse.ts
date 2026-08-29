@@ -267,7 +267,7 @@ class Parser {
 
     if (token.value === "(") {
       this.pos += 1;
-      // Either a ternary or a parenthesised value.
+      // Either a ternary, a group of conditions, or a parenthesised value.
       const mark = this.save();
       try {
         const condition = this.parseCondition();
@@ -282,9 +282,13 @@ class Parser {
         // not a ternary
       }
       this.restore(mark);
-      const inner = this.parseTerm();
+      const { joiner, conditions } = this.parseExpression();
       this.expect(")");
-      return inner;
+      // One bare condition in parentheses is just a parenthesised value; only a joined or
+      // inverted set needs a group to hold it.
+      const only = conditions.length === 1 ? conditions[0] : null;
+      if (only && only.op === null && !only.negate) return only.left;
+      return { kind: "group", joiner, conditions };
     }
 
     if (token.type === "ident") {

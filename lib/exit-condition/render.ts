@@ -103,6 +103,8 @@ export function renderTerm(term: TermNode): string {
     case "ternary":
       // Always parenthesized: SEL's ternary binds looser than comparison/arithmetic.
       return `(${renderCondition(term.condition)} ? ${renderTerm(term.then)} : ${renderTerm(term.else)})`;
+    case "group":
+      return `(${term.conditions.map(renderCondition).join(` ${term.joiner} `)})`;
   }
 }
 
@@ -120,12 +122,27 @@ export function renderCondition(cond: Condition): string {
   return cond.negate ? `not (${body})` : body;
 }
 
+/** True when the whole string is already one parenthesised unit, so wrapping it again would only
+ * add noise. */
+function isWrapped(text: string): boolean {
+  if (!text.startsWith("(") || !text.endsWith(")")) return false;
+  let depth = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "(") depth += 1;
+    else if (text[i] === ")") {
+      depth -= 1;
+      if (depth === 0) return i === text.length - 1;
+    }
+  }
+  return false;
+}
+
 export function renderExpression(state: BuilderState): string {
   const conditionsStr = state.conditions.map((c) => renderCondition(c));
   const combined =
     conditionsStr.length <= 1
       ? conditionsStr[0] ?? ""
-      : conditionsStr.map((c) => (c.includes(" ") ? `(${c})` : c)).join(` ${state.joiner} `);
+      : conditionsStr.map((c) => (c.includes(" ") && !isWrapped(c) ? `(${c})` : c)).join(` ${state.joiner} `);
 
   if (state.name.trim()) {
     return `/* ${state.name.trim()} */ ${combined}`;

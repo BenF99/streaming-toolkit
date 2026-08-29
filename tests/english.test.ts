@@ -70,6 +70,21 @@ describe("plain-English readback", () => {
     ]);
   });
 
+  it("leads with the condition when a ternary picks between two sets of conditions", () => {
+    assert.equal(
+      readback("(queryType == 'movie' ? (count(totalStreams) >= 4 or totalTimeTaken > 1000) : (count(totalStreams) >= 2))"),
+      "Stop searching once if what's being searched for is “movie”, there are at least 4 streams or the time spent searching is more than 1 second; " +
+        "otherwise there are at least 2 streams.",
+    );
+  });
+
+  it("joins a set of conditions with the word it was built from", () => {
+    assert.match(
+      readback("(queryType == 'movie' ? (count(totalStreams) >= 4 and totalTimeTaken > 1000) : (count(totalStreams) >= 2))"),
+      /there are at least 4 streams and the time spent searching is more than 1 second/,
+    );
+  });
+
   it("has nothing to say about an empty builder", () => {
     const parsed = parseExpression("");
     assert.ok(parsed.ok, parsed.ok ? "" : parsed.error);

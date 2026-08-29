@@ -27,7 +27,9 @@ export function ConditionRow({ condition, onChange, onRemove, index, showLabel, 
   // A stream count only means something compared to a fixed number, never to another constant.
   const leftIsCountedStreams = condition.left.kind === "chain" && condition.left.chain.steps.at(-1)?.fnId === "count";
   const availableOps = comparisonOpsForType(leftType);
-  const canCompare = availableOps.length > 0;
+  // A group or a boolean ternary is already a true/false test; `== true` would only restate it.
+  const leftIsClause = leftType === "boolean" && (condition.left.kind === "group" || condition.left.kind === "ternary");
+  const canCompare = availableOps.length > 0 && !leftIsClause;
   const hasComparison = condition.op !== null;
   // Suppressed when a nested control already shows a more specific message for the same flaw.
   const nestedProblem = hasTermProblem(condition.left) || (condition.op !== null && hasTermProblem(condition.right));
@@ -157,6 +159,8 @@ export function ConditionRow({ condition, onChange, onRemove, index, showLabel, 
           </ButtonSubtle>
           {needsComparison(condition) && <Note>A calculation on its own is always true. Compare it to something.</Note>}
         </div>
+      ) : leftIsClause ? (
+        <Note>This already answers true or false on its own, so there&apos;s nothing to compare it to.</Note>
       ) : leftType === "streams" ? (
         <div className="flex flex-col gap-1.5">
           {/* Counting only works on a chain; a non-chain stream list (e.g. from a ternary) is fine as-is. */}

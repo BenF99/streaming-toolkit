@@ -22,6 +22,11 @@ const ROUND_TRIPS = [
     "(count(resolution(cached(negate(regexMatched(totalStreams, 'Bad'), regexMatched(totalStreams))), '2160p', '1440p', '1080p')) >= 5) or " +
     "(count(quality(resolution(cached(totalStreams), '2160p', '1440p', '1080p'), 'Bluray REMUX', 'Bluray', 'WEB-DL')) >= 10) or " +
     "(totalTimeTaken > 5000)",
+  // A ternary picking between two sets of conditions, not two plain values.
+  "(queryType == 'movie' ? (count(totalStreams) >= 1 or count(cached(totalStreams)) >= 3) : (count(totalStreams) >= 1 or count(cached(totalStreams)) >= 2)) or " +
+    "(count(resolution(cached(totalStreams), '1080p')) >= 5) or " +
+    "(totalTimeTaken >= 20000)",
+  "(queryType == 'movie' ? (totalTimeTaken > 1000 and count(totalStreams) >= 2) : (totalTimeTaken > 2000))",
 ];
 
 describe("parse and render are inverses", () => {
